@@ -1,0 +1,407 @@
+---
+title: "PRISM Weather Data by Zipcode, County, or State"
+author: '[Seunghyun Lee](mailto:arslee@ucdavis.edu)'
+output:
+  html_document:
+    # theme: yeti
+    toc: true
+    toc_float: true
+    # code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = F)
+
+# knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{css, echo = FALSE}
+
+table, td, th {
+  border: none;
+  padding-left: 1em;
+  padding-right: 1em;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.scroll{
+  max-height: 400px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+
+
+```
+
+<style type="text/css">
+
+h1.title {
+  text-align: center;
+  font-size: 38px;
+  color: DarkBlue;
+  font-weight: bold;
+}
+h3.subtitle {
+  text-align: center;
+  font-size: 20px;
+  color: DarkRed;
+  font-weight: bold;
+}
+h4.author{
+  text-align: right;
+  font-size: 16px;
+  font-weight: bold;
+}
+h4.date{
+  text-align: right;
+  font-size: 16px;
+  font-weight: bold;
+}
+h1 { /* Header 1 */
+  font-size: 22px;
+  color: DarkBlue;
+  font-weight: bold;
+}
+h2 { /* Header 2 */
+  font-size: 18px;
+  color: DarkBlue;
+  font-weight: bold;
+}
+h3 { /* Header 3 */
+  font-size: 14px;
+  color: DarkBlue;
+  font-weight: bold;
+}
+
+body{
+  font-family: Times, serif;
+  font-size: 16px;
+}
+
+</style>
+
+Please read below for a description of the available data, instructions on how to import it using R, and R code to visualize the data. You can also use the "Download Data Using Web Tool" tab to select the desired data and download it in CSV format. If you need to request heavy data (such as ZIP code-level data or daily county-level data for more than 10 years and 10 states), we strongly recommend that you pull our data using a local computer as described below instead of using our R Shiny app in the "Download Data Using Web Tool" tab.
+
+# Summary of Available Data
+
+-   Variables
+    -   tmin: Minimum Temperature ($^\circ C$)
+    -   tmax: Maximum Temperature ($^\circ C$)
+    -   tavg: Average Temperature ($^\circ C$) (i.e., (tmax+tmin)/2)
+    -   ppt: Precipitation ($mm$)
+    -   dday_a$\small{X}$: degree days
+above one of various thresholds $(\small{0-34^\circ C})$
+    -   dday_b$\small{Y}$: degree days
+below one of $\small{15, 18, \text{and }
+21^\circ C}$
+-   Geographic Coverage: the contiguous United States
+-   Time Period: 01/01/1981 - Present
+
+**(Data will be updated on the 2nd day of every month)**
+
+
+-   Temporal Unit: Daily, and Monthly
+-   Spatial Unit: ZIP code, County, and State
+-   Weighting Scheme: No Weight (i.e., simple average), Cropland, and Population. (See Methods & Materials for details. No weighting scheme was applied to ZIP code-level data because weighting makes little difference.)
+
+<p>The available combinations of
+<code>temporalUnit</code>,<code>spatialUnit</code>,and
+<code>weighting</code> are</p>
+<pre><code>##     temorapUnit spatialUnit  weighting
+##  1:       daily         zip   noweight
+##  2:       daily      county   noweight
+##  3:       daily      county   cropland
+##  4:       daily      county population
+##  5:       daily       state   noweight
+##  6:       daily       state   cropland
+##  7:       daily       state population
+##  8:     monthly         zip   noweight
+##  9:     monthly      county   noweight
+## 10:     monthly      county   cropland
+## 11:     monthly      county population
+## 12:     monthly       state   noweight
+## 13:     monthly       state   cropland
+## 14:     monthly       state population</code></pre>
+<ul>
+
+
+-   **Disclaimer**: Data for dates that are 1-6 months old
+are subject to change. This is because we source data directly from [the PRISM Climate
+Group](https://prism.oregonstate.edu/). Its website states *Data stability indicates how likely the
+data is to change in the future. Results that include dates older than 6
+months are considered`stable`because they are
+unlikely to change until a major new release of PRISM. If they include
+dates that are 1-6 months old they are considered `provisional` since they are likely to change as our
+reporting networks finalize their information. If any dates fall within
+the current month, users are cautioned to treat them as `early` results; this data is certain to change as new
+reporting stations are added and quality control measures are
+applied.*
+
+
+
+# How to import data
+
+## Preamble: Load packages
+```{r, message=F, results='hide'}
+#--- load packages ---#
+
+if (!require("pacman")) install.packages("pacman")
+
+pacman::p_load(
+     #....for importing and processing data....#
+ tidyverse,
+ data.table,
+ purrr,
+     #....for visualization....#
+ sf,
+ tigris,
+ pals
+)
+```
+
+## Importing a single file in R
+
+To import data, you can use the following syntax:
+
+https\://files.asmith.ucdavis.edu/weather/<p style="color:red">
+temporalUnit/spatialUnit/weighting/yyyymm.csv</p>
+
+
+```{r}
+df <- fread("https://files.asmith.ucdavis.edu/weather/daily/state_noweight/202201.csv") # fread() is faster than read_csv() and read.csv(). 
+
+head(df)
+```
+
+To save data using R, modify the code below:
+
+```{r, eval=F}
+filename <- "Folder_To_Store/filename.csv"
+fwrite(df, file = filename)
+```
+
+# Importing multiple files in R
+Users can use or modify the function below to flexibly pull our data.
+
+
+```{r}
+download_prism <- function(states, # e.g., c("CA","OR")
+                           years, # e.g., 2000:2020
+                           months, # e.g., 1:12
+                           temporalUnit, # one of "daily", "monthly"
+                           spatialUnit, # one of "state", "county","zip"
+                           weighting, # one of "noweight", "cropland", "population"
+                           variables) {
+  #---ID columns---#
+  IDs <- list(
+    zip = c("st_abb", "st_code", "county_name", "fips", "zipcode"),
+    county = c("st_abb", "st_code", "county_name", "fips"),
+    state = c("st_abb", "st_code"),
+    daily = c("date", "stability"),
+    monthly = c("ym")
+  )
+
+  #--- yyyymm to include  ---#
+  df_ym <- expand_grid(
+    y = years,
+    m = str_pad(months, side = "left", pad = "0", width = 2)
+  ) %>%
+   filter(as.integer(paste0(y, m)) < as.integer(str_sub(str_remove(today(), "-"), 1, 6)))
+
+
+  #--- URLs to include  ---#
+  URLs <- paste0(
+    "http://files.asmith.ucdavis.edu/weather/",
+    temporalUnit, "/",
+    spatialUnit, "_",
+    weighting, "/",
+    df_ym$y, df_ym$m,
+    ".csv"
+  )
+
+  #--- pull data ---#
+  map(URLs, function(url) {
+    fread(url)[st_abb %in% states, c(IDs[[spatialUnit]], IDs[[temporalUnit]], variables), with = F]
+  }) %>%
+    rbindlist()
+}
+
+```
+
+### Example 1: Growing-season extreme heat (>30 C) in IA, IL, and IN for selected years
+The following code will pull monthly cropland-weighted county-level data for Iowa, Illinois, and Indiana for three dry/hot years (1983, 1988, and 2012) and three wet years (1993, 2019, and 2020).
+
+
+```{r}
+df <- download_prism(
+  c("IA", "IL", "IN"), # three corn belt states
+  c(1983, 1988, 1993, 2012, 2019, 2020), # three dry/hot years and three wet years
+  4:9, # April-September (growing season)
+  "monthly",
+  "county",
+  "cropland",
+  "dday_a30C"
+)
+
+head(df)
+```
+
+```{r, results='hide', message=F}
+#--- set up map theme ---#
+theme_map <- function(...) {
+  theme_minimal() +
+    theme(
+      strip.background = element_rect(colour = "black", fill = "#f5f5f2"),
+      strip.text = element_text(
+        size = 12,
+        face = "bold",
+        margin = margin(3, 3, 3, 3)
+      ),
+      plot.title = element_text(size = 14, face="bold", hjust=.5),
+      legend.text = element_text(size = 9, face = "bold"),
+      legend.title = element_text(size = 10, face = "bold"),
+      axis.line = element_blank(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.border = element_blank(), ...
+    )
+}
+
+
+#--- county and state boundaries for plot ---#
+cb <- counties(cb = T) %>%
+  mutate(fips = as.integer(GEOID)) %>%
+  select(st_abb = STUSPS, fips)
+
+sb <- states(cb = T) %>% 
+  select(st_abb = STUSPS)
+
+#--- plot ---#
+df %>%
+  mutate(year = str_sub(ym, 1, 4)) %>%
+  group_by(fips, year) %>%
+  summarise(extreme_heat = sum(dday_a30C)) %>%
+  left_join(cb[cb$st_abb %in% c("IA", "IL", "IN"), ], by = "fips") %>%
+  ungroup() %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = extreme_heat)) +
+  scale_fill_gradientn(colors = rev(pals::brewer.rdylbu(10))) +
+  labs(fill = "Deg. Days", title = "Growing-Season Exposure to Extreme Heat (>30C)") +
+  geom_sf(data=sb[sb$st_abb %in% c("IA", "IL", "IN"), ], color = "black", lwd = 0.8, alpha = 0) +
+  facet_wrap(~year) +
+  theme_map()
+
+```
+
+### Example 2: California precipitation anomaly in 2023
+
+```{r, message=F, warning=F}
+#--- pull data ---#
+df <- download_prism(
+  "CA",
+  1981:2023,
+  1:3, 
+  "monthly",
+  "county",
+  "population",
+  "ppt"
+)
+
+head(df)
+
+#--- plot ---#
+df %>%
+  group_by(fips, month = factor(str_sub(ym, -1),
+    levels = 1:3,
+    labels = month.abb[1:3]
+  )) %>%
+  summarise(
+    year = str_sub(ym, 1, 4),
+    ppt_anomaly = (ppt - mean(ppt)) / sd(ppt)
+  ) %>%
+  filter(year == 2023) %>%
+  left_join(cb[cb$st_abb == "CA", ], by = "fips") %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = ppt_anomaly)) +
+  scale_fill_gradientn(colors = rev(pals::brewer.rdylbu(10))) +
+  labs(
+    fill = "Z-score",
+    title = "Precipitation Anomaly in 2023"
+  ) +
+  theme_map() +
+  facet_wrap(~month)
+```
+
+# Methods and Materials
+
+##  Raw data (See Sources of Raw Data for details)
+
+-   Raster files
+    -   (~4km) gridded data on tmin, tmax, and ppt from PRISM Climate group
+    -   (~1km) gridded data on population density (Gridded Population of the World, Version 4 (GPWv4))
+    -   (~30m) gridded data on land use (United States Geological Survey (USGS) National Land Cover Database (NLCD), 2019 release)
+-   Shape files
+    -   county boundaries from US Census Bureau
+    -   ZIP Code Tabulation Areas from US Census Bureau
+
+## Methods
+
+### Constructing population-weighted or cropland-weighted county-level data 
+We first temporally aggregated estimates of population or cropland fraction for each PRISM grid cell (see figures below). Therefore, our weighting grid layers are time-invariant. A value in the population-weighting grid cell represents the average population estimate for that grid cell between the years 2000, 2005, 2010, 2015, and 2020. Similarly, a value in the cropland-weighting grid cell represents the average estimate of cropland fraction for that grid cell between the years 2001, 2004, 2006, 2008, 2011, 2013, 2016, and 2019. We considered pasture/hay and cultivated cropland in the USGS NLCD as cropland. To construct county-level data, we then computed the population-weighted or cropland-weighted average of tmin, tmax, or ppt for each county or ZIP code using a combination of gridded PRISM weather data and the relevant weighting grid layer.
+
+![](Figure/PRISM_cropland.png)
+
+![](Figure/PRISM_pop.png)
+
+
+### Degree Days
+We computed degree days fitting a sine function to daily minimum and maximum temperature data. In practice, we used `TrenchR` package (For technical details, [see this document](https://trenchproject.github.io/TrenchR/articles/MicroclimateTutorial.html)). Technically, the method is the same as the [one](https://www.dropbox.com/s/5l2nftv5fs7d09r/degreeDays.do?dl=1) used by [Wolfram Schlenker](http://www.columbia.edu/~ws2162/links.html).
+
+### State-level data
+We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (for no weight). This means that it is possible for the state-level `tmin` to be above 15C  $\small{15^\circ C}$ , but `dday_b15C` may not be zero in the state-level dataset.
+
+
+# Technical Validation
+## Weighting
+The maps below show the percent difference in precipitation between the weighted and unweighted data at the county level. As the figures suggest, the difference tends to be higher in larger counties and for daily-level data.
+
+![](Figure/diff_rate_ppt.png)
+
+
+
+## Comparison with Wolfram Schlenker’s
+This project was inspired by [Wolfram Schlenker](http://www.columbia.edu/~ws2162/links.html), who provides Stata code and raw weather data for constructing cropland-weighted county-level weather data for the Contiguous US for 1950-2019. However, due to the need to make various decisions when constructing these data, our results and Wolfram Schlenker’s data are not always identical.
+
+The figures below show scatter plots of county-level cropland-weighted weather data from both Wolfram Schlenker (**WS**) and our project (**SL**) at the daily and monthly levels. Discrepancies can arise due to the following reasons. First, Wolfram Schlenker constructed and used his own gridded weather data, keeping the set of weather stations constant over time, whereas we used gridded weather data from the [PRISM Climate Group](https://prism.oregonstate.edu/), which are based on all available weather stations. Second, the weighting grid layers used in our project and Wolfram Schlenker's may differ.
+![](Figure/WS_SL_daily.png)
+
+![](Figure/WS_SL_monthly.png)
+
+
+# Sources of Raw Data
+-   PRISM weather data: PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu
+-   Administrative boundaries: US Census Bureau,
+    -   ZIP Code Tabulation Areas: https://www2.census.gov/geo/tiger/GENZ2019/shp/cb_2019_us_zcta510_500k.zip
+    -   County: https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_county_500k.zip
+
+-   Population density: Center for International Earth Science Information Network - CIESIN - Columbia University, Gridded Population of the World, Version 4 (GPWv4): Population Density, Revision 11, NASA Socioeconomic Data and Applications Center (SEDAC), DOI: https://doi.org/10.7927/H49C6VHW
+    -   2000: https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2000_30_sec_tif.zip
+    -   2005: https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2005_30_sec_tif.zip
+    -   2010: https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2010_30_sec_tif.zip
+    -   2015: https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2015_30_sec_tif.zip
+    -   2020: https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2020_30_sec_tif.zip
+
+
+-   National Land Cover Database: Dewitz, J., and U.S. Geological Survey, 2021, National Land Cover Database (NLCD) 2019 Products (ver. 2.0, June 2021): U.S. Geological Survey data release, https://doi.org/10.5066/P9KZCM54, https://s3-us-west-2.amazonaws.com/mrlc/NLCD_landcover_2019_release_all_files_20210604.zip

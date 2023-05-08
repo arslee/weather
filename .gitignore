@@ -6,3 +6,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.dta
+readme_files/
+readme_caches/
+deploy.R
