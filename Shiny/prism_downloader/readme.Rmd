@@ -370,7 +370,7 @@ We first temporally aggregated estimates of population or cropland fraction for 
 We computed degree days fitting a sine function to daily minimum and maximum temperature data. In practice, we used `TrenchR` package (For technical details, [see this document](https://trenchproject.github.io/TrenchR/articles/MicroclimateTutorial.html)). Technically, the method is the same as the [one](https://www.dropbox.com/s/5l2nftv5fs7d09r/degreeDays.do?dl=1) used by [Wolfram Schlenker](http://www.columbia.edu/~ws2162/links.html).
 
 ### State-level data
-We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (for no weight). This means that it is possible for the state-level `tmin` to be above 15C  $\small{15^\circ C}$ , but `dday_b15C` may not be zero in the state-level dataset.
+We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (for no weight). This means that it is possible for the state-level `tmin` to be above $\small{15^\circ C}$ , but `dday_b15C` may not be zero in the state-level dataset.
 
 
 # Technical Validation
