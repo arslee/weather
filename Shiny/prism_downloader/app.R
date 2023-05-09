@@ -13,61 +13,61 @@ library(shinyWidgets)
 library(shinydashboard)
 library(progress)
 
-# setwd("Shiny/prism_downloader_temp/")
-default_style <-
-  "
-.form-group { margin-bottom: -8px !important;}
-
- h4 { font-size: 15px;
-  font-weight: bold;
-  font-family: ACalibri;
-  color: #80bfff;
-    text-align: center
-}
-/* logo */
-  .skin-blue .main-header .logo {
-    background-color: #f4b943;
-  }
-
-/* logo when hovered */
-  .skin-blue .main-header .logo:hover {
-    background-color: #f4b943;
-  }
-
-/* navbar (rest of the header) */
-  .skin-blue .main-header .navbar {
-    background-color: #f4b943;
-  }
-
-/* main sidebar */
-  .skin-blue .main-sidebar {
-    background-color: #ff69b4;
-  }
-
-/* active selected tab in the sidebarmenu */
-  .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
-    background-color: #ff0000;
-  }
-
-/* other links in the sidebarmenu */
-  .skin-blue .main-sidebar .sidebar .sidebar-menu a{
-    background-color: #00ff00;
-      color: #000000;
-  }
-
-/* other links in the sidebarmenu when hovered */
-  .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
-    background-color: #ff69b4;
-  }
-/* toggle button when hovered  */
-  .skin-blue .main-header .navbar .sidebar-toggle:hover{
-    background-color: #ff69b4;
-  }
-
-.span8 .well { background-color: white; }
-.shiny-output-error:before { visibility: hidden; }
-"
-# default_style <-''
+# setwd("Shiny/prism_downloader/")
+# default_style <-
+#   "
+# .form-group { margin-bottom: -8px !important;}
+# 
+#  h4 { font-size: 15px;
+#   font-weight: bold;
+#   font-family: ACalibri;
+#   color: #80bfff;
+#     text-align: center
+# }
+# /* logo */
+#   .skin-blue .main-header .logo {
+#     background-color: #f4b943;
+#   }
+# 
+# /* logo when hovered */
+#   .skin-blue .main-header .logo:hover {
+#     background-color: #f4b943;
+#   }
+# 
+# /* navbar (rest of the header) */
+#   .skin-blue .main-header .navbar {
+#     background-color: #f4b943;
+#   }
+# 
+# /* main sidebar */
+#   .skin-blue .main-sidebar {
+#     background-color: #ff69b4;
+#   }
+# 
+# /* active selected tab in the sidebarmenu */
+#   .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+#     background-color: #ff0000;
+#   }
+# 
+# /* other links in the sidebarmenu */
+#   .skin-blue .main-sidebar .sidebar .sidebar-menu a{
+#     background-color: #00ff00;
+#       color: #000000;
+#   }
+# 
+# /* other links in the sidebarmenu when hovered */
+#   .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+#     background-color: #ff69b4;
+#   }
+# /* toggle button when hovered  */
+#   .skin-blue .main-header .navbar .sidebar-toggle:hover{
+#     background-color: #ff69b4;
+#   }
+# 
+# .span8 .well { background-color: white; }
+# .shiny-output-error:before { visibility: hidden; }
+# "
+default_style <-''
 options(datatable.showProgress = F)
 
 
