@@ -402,7 +402,7 @@ Using calculated degree days above a threshold, we compute degree days below the
 $$\text{dday_bX} = \text{dday_aX} - tavg + X$$
 
 ### State-level data
-We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (with no weight). Therefore, a value in the state-level dataset represents the average county within that state. This also means that it is possible for `tmin` to be above $\small{15^\circ C}$ while `dday_b15C` is not zero in the state-level dataset.
+We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (for no weight). Therefore, the state-level dataset represents the values of weather variables for the average county in a state. This also means that it is possible for `tmin` to be above $\small{15^\circ C}$ while `dday_b15C` is not zero in the state-level dataset.
 
 
 # Technical Validation
