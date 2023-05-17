@@ -402,7 +402,7 @@ Using calculated degree days above a threshold, we compute degree days below the
 $$\text{dday_bX} = \text{dday_aX} - tavg + X$$
 
 ### State-level data
-We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (for no weight). This means that it is possible for the state-level `tmin` to be above $\small{15^\circ C}$ , but `dday_b15C` may not be zero in the state-level dataset.
+We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (with no weight). Therefore, a value in the state-level dataset represents the average county within that state. This also means that it is possible for `tmin` to be above $\small{15^\circ C}$ while `dday_b15C` is not zero in the state-level dataset.
 
 
 # Technical Validation
@@ -437,3 +437,7 @@ The figures below show scatter plots of county-level cropland-weighted weather d
 
 
 -   National Land Cover Database: Dewitz, J., and U.S. Geological Survey, 2021, National Land Cover Database (NLCD) 2019 Products (ver. 2.0, June 2021): U.S. Geological Survey data release, https://doi.org/10.5066/P9KZCM54, https://s3-us-west-2.amazonaws.com/mrlc/NLCD_landcover_2019_release_all_files_20210604.zip
+
+
+# Code Availability
+The code to process data and generate figures is available [here](https://github.com/arslee/weather).
