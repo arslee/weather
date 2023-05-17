@@ -11,7 +11,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = T)
+knitr::opts_chunk$set(echo = TRUE)
 
 # knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -68,19 +68,19 @@ h1 { /* Header 1 */
   font-weight: bold;
 }
 h2 { /* Header 2 */
-  font-size: 18px;
+  font-size: 20px;
   color: DarkBlue;
   font-weight: bold;
 }
 h3 { /* Header 3 */
-  font-size: 14px;
+  font-size: 18px;
   color: DarkBlue;
   font-weight: bold;
 }
 
 body{
   font-family: Georgia, serif;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 </style>
@@ -169,7 +169,7 @@ pacman::p_load(
 To import data, you can use the following syntax:
 
 https\://files.asmith.ucdavis.edu/weather/<p style="color:red">
-temporalUnit/spatialUnit/weighting/yyyymm.csv</p>
+temporalUnit/spatialUnit_weighting/yyyymm.csv</p>
 
 
 ```{r}
@@ -190,13 +190,14 @@ Users can use or modify the function below to flexibly pull our data.
 
 
 ```{r}
-download_prism <- function(states, # e.g., c("CA","OR")
-                           years, # e.g., 2000:2020
+download_prism <- function(years, # e.g., 2000:2020
                            months, # e.g., 1:12
                            temporalUnit, # one of "daily", "monthly"
                            spatialUnit, # one of "state", "county","zip"
                            weighting, # one of "noweight", "cropland", "population"
-                           variables) {
+                           states = NULL, # e.g., c("CA","OR"). Default is all states.
+                           variables = NULL # e.g., tmin. Default is all variables.
+) {
   #---ID columns---#
   IDs <- list(
     zip = c("st_abb", "st_code", "county_name", "fips", "zipcode"),
@@ -211,7 +212,7 @@ download_prism <- function(states, # e.g., c("CA","OR")
     y = years,
     m = str_pad(months, side = "left", pad = "0", width = 2)
   ) %>%
-   filter(as.integer(paste0(y, m)) < as.integer(str_sub(str_remove(today(), "-"), 1, 6)))
+    filter(as.integer(paste0(y, m)) < as.integer(str_sub(str_remove(today(), "-"), 1, 6)))
 
 
   #--- URLs to include  ---#
@@ -225,6 +226,16 @@ download_prism <- function(states, # e.g., c("CA","OR")
   )
 
   #--- pull data ---#
+  if (is.null(variables)) {
+    variables <- fread("http://files.asmith.ucdavis.edu/weather/monthly/state_noweight/198101.csv") %>%
+      .[, !c("st_abb", "st_code", "ym"), with = F] %>%
+      names()
+  }
+  
+  if (is.null(states)) {
+    states <- fread("http://files.asmith.ucdavis.edu/weather/monthly/state_noweight/198101.csv")$st_abb
+  }
+
   map(URLs, function(url) {
     fread(url)[st_abb %in% states, c(IDs[[spatialUnit]], IDs[[temporalUnit]], variables), with = F]
   }) %>%
@@ -239,13 +250,13 @@ The following code will pull monthly cropland-weighted county-level data for Iow
 
 ```{r}
 df <- download_prism(
-  c("IA", "IL", "IN"), # three corn belt states
   c(1983, 1988, 1993, 2012, 2019, 2020), # three dry/hot years and three wet years
   4:9, # April-September (growing season)
   "monthly",
   "county",
   "cropland",
-  "dday_a30C"
+   c("IA", "IL", "IN"), # three corn belt states
+   "dday_a30C"
 )
 
 head(df)
@@ -309,12 +320,12 @@ df %>%
 ```{r, message=F, warning=F}
 #--- pull data ---#
 df <- download_prism(
-  "CA",
   1981:2023,
   1:3, 
   "monthly",
   "county",
   "population",
+  "CA",
   "ppt"
 )
 
@@ -367,7 +378,28 @@ We first temporally aggregated estimates of population or cropland fraction for 
 
 
 ### Degree Days
-We computed degree days fitting a sine function to daily minimum and maximum temperature data. In practice, we used `TrenchR` package (For technical details, [see this document](https://trenchproject.github.io/TrenchR/articles/MicroclimateTutorial.html)). Technically, the method is the same as the [one](https://www.dropbox.com/s/5l2nftv5fs7d09r/degreeDays.do?dl=1) used by [Wolfram Schlenker](http://www.columbia.edu/~ws2162/links.html).
+
+i) **degree days above threshold**
+
+We computed degree days fitting a sine function to daily minimum and maximum temperature data. In practice, we used [`TrenchR` package](https://trenchproject.github.io/TrenchR/articles/MicroclimateTutorial.html). The package computes degree days using the methods detailed here: http://ipm.ucanr.edu/WEATHER/ddfigindex.html. In what follows, we summarize the formula used to compute degree days above a threshold in our data. 
+
+  + Case 1) $X < tmin$ 
+     
+$$\text{dday_aX}= tavg - X$$
+
+  + Case 2) $tmin \leq X < tmax$ 
+$$\text{dday_aX}= \frac{1}{\pi}\left[(tavg -X)(\frac{\pi}{2}-\theta)+(\frac{tmax-tmin}{2}) cos(\theta)\right],$$
+where $$\theta=sin^{-1}\left(X-tavg+(\frac{tmax-tmin}{2}) \right).$$
+
+   + Case 3) $tmax \leq X$ 
+$$\text{dday_aX}= 0$$
+
+Technically, the method is the same as the [one](https://www.dropbox.com/s/5l2nftv5fs7d09r/degreeDays.do?dl=1) used by [Wolfram Schlenker](http://www.columbia.edu/~ws2162/links.html).
+
+ii) **degree days below threshold**
+
+Using calculated degree days above a threshold, we compute degree days below the threshold as follows: 
+$$\text{dday_bX} = \text{dday_aX} - tavg + X$$
 
 ### State-level data
 We constructed a state-level weather variable by aggregating the corresponding county-level weather variable using the relevant county-level weight—population, cropland, or geographic size of land (for no weight). This means that it is possible for the state-level `tmin` to be above $\small{15^\circ C}$ , but `dday_b15C` may not be zero in the state-level dataset.

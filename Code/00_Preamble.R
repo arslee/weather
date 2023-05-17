@@ -11,6 +11,7 @@ dir$pop <- "Data/Raw/gpw-v4-population-density/"
 
 ## Set temperature thresholds -----------------------------------------------------------
 lower_thresholds <- c(0, 5, 8, 10, 12, 15, 20, 25, 29, 30, 31, 32, 33, 34)
+new_lower_thresholds <- c(0, 5, 8, 10, 12, 15, 18, 20, 21, 25, 29, 30, 31, 32, 33, 34)
 upper_thresholds <- seq(15,23,3)
 
 ## function -----------------------------------------------------------

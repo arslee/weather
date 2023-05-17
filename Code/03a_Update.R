@@ -22,7 +22,6 @@ ym_starts <- seq(
 )
 ym_ends <- (ym_starts %m+% months(1)) - 1
 
-
 M <- data.table(
   start = ym_starts,
   end = ym_ends
@@ -78,8 +77,8 @@ for (ym in 1:nrow(M)) {
   df[, paste0(cols) := lapply(.SD, function(x) round(x, digits = 3)), .SDcols = cols]
   setnames(df, "s", "agg_level")
 
-  ## Construct degree days -------------------------------------
-  df_dday_a <- map_dfc(.progress = T, lower_thresholds, function(thr) {
+  ## Construct dday_aX-------------------------------------
+  df_dday_a <- map_dfc(.progress = T, new_lower_thresholds, function(thr) {
     dday <- data.table(v = pmap_dbl(
       list(df$tmin, df$tmax),
       function(tmin, tmax) {
@@ -90,18 +89,13 @@ for (ym in 1:nrow(M)) {
     setnames(dday, "v", paste0("dday_a", thr, "C"))
   })
 
-  df_dday_b <- map_dfc(.progress = T, upper_thresholds, function(thr) {
-    dday <- data.table(v = pmap_dbl(
-      list(df$tmin, df$tmax),
-      function(tmin, tmax) {
-        degree_days(tmin, tmax, tmin, max(thr + 0.000001, tmin + 0.000001)) %>%
-          round(digits = 3)
-      }
-    ))
-    setnames(dday, "v", paste0("dday_b", thr, "C"))
-  })
+  df <- cbind(df, df_dday_a)
 
-  df <- cbind(df, df_dday_a, df_dday_b)
+  ## Construct dday_bX--------------------------------------
+  df[, dday_b15C := round(pmax(dday_a15C - tavg + 15, 0), digits = 3)]
+  df[, dday_b18C := round(pmax(dday_a18C - tavg + 18, 0), digits = 3)]
+  df[, dday_b21C := round(pmax(dday_a21C - tavg + 21, 0), digits = 3)]
+
   ## Export -------------------------------------
   AW <- df[, .(agg_level, weight)] %>% unique()
   file <- paste0(str_sub(str_remove(M[ym, ]$start, "-"), 1, 6), ".csv")
@@ -263,7 +257,7 @@ map(files, function(f) {
   if (str_detect(f, "county")) {
     out <- df_c[df, on = "fips"]
   } else {
-    out <- df_z[df, on = "zipcode"]
+    out <- df_z[df, on = "zipcode"][!is.na(st_code)]
   }
 
   fwrite(out, file = f)
