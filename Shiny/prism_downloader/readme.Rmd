@@ -389,7 +389,7 @@ $$\text{dday_aX}= tavg - X$$
 
   + Case 2) $tmin \leq X < tmax$ 
 $$\text{dday_aX}= \frac{1}{\pi}\left[(tavg -X)(\frac{\pi}{2}-\theta)+(\frac{tmax-tmin}{2}) cos(\theta)\right],$$
-where $$\theta=sin^{-1}\left(X-tavg+(\frac{tmax-tmin}{2}) \right).$$
+where $$\theta=sin^{-1}\left((X-tavg) \div (\frac{tmax-tmin}{2}) \right).$$
 
    + Case 3) $tmax \leq X$ 
 $$\text{dday_aX}= 0$$
